@@ -1,0 +1,20 @@
+---
+##collect installed package lists with versions##
+
+- hosts: all
+  remote_user: sundar
+  sudo: yes
+  
+  tasks:
+  - name: collect installed package lists
+    shell: dpkg -l grep ^ii awk "{ printf \"%-50s %-40s\n\", $2,$3 }" > /root/package_list_tmp_01
+  - name: fetch the list to local machine
+    fetch: 
+    src: /root/package_list_tmp_01
+    dest: /root/package_maintenance/{{ inventory_hostname }}
+    fail_on_missing: yes
+  - name: delete the temp file
+    file: path=/root/package_list_tmp_01
+    state: absent
+
+...
