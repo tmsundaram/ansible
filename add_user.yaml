@@ -1,0 +1,36 @@
+---
+### Usage: 
+### ansible-playbook playbook.yaml -K -e user_name="user1" -e groupnames="" -e host_name="servername" -e key_file="/path/to/pub/file" -e priv_key_file="path/to/rsa" ##
+
+- hosts: "{{ host_name }}"
+  gather_facts: yes
+  become: yes
+ 
+  tasks:
+### Check the arguments provided through command ###
+  - fail:
+     msg: "Provide all the arguments while executing playbook. Some of argument(s) missing."
+    when: user_name is undefined or host_name is undefined or key_file is undefined or priv_key_file is undefined
+
+## Proceed with user creation ##
+  - name: create user on remote machine
+    user:
+     name: "{{ user_name }}"
+     createhome: yes
+     groups: "{{ groupnames }}"
+     shell: /bin/bash
+     state: present
+     append: yes
+  - name: copy ssh public key to remote host
+    authorized_key:
+     key: "{{ lookup ('file', '{{ key_file }}') }}"
+     manage_dir: yes
+     state: present
+     user: "{{ user_name }}"
+
+## Test user access ##
+  - name: Test the user access
+    local_action: shell ssh -q -i "{{ priv_key_file }}" -p "{{ ansible_port }}" -o ConnectTimeout=3 "{{ user_name }}"@"{{ ansible_hostname }}" "echo OK"
+    register: result
+    failed_when: result.stdout != 'OK'
+...
